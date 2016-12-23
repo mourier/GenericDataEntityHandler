@@ -45,6 +45,50 @@ namespace GenericSQLEntityHandler
 
         #region Save Methods
 
+        /// <summary>
+        /// Saves a single entity to the database.
+        /// </summary>
+        /// <param name="entity">The entity to save.</param>
+        /// <param name="table">The name of the table to save to.</param>
+        /// <param name="identityColumns">Only used for Update and InsertOrUpdate. Must contain the columns that identify the entity (Case sensitive).</param>
+        /// <param name="saveType">To save to or update the database, InsertOrUpdate handles a mixed list, but has a little overhead. FastInsert will not select the autogen column after an insert.</param>
+        /// <param name="autoGenIdColumn">If an autoincrement column is in the table, on insert it sets the new id to the inserted entitys corresponding property (Case sensitive).</param>
+        /// <returns>Returns true if the entity is saved/updated, else false.</returns>
+        public bool SaveEntity<T>(T entity, string table, string[] identityColumns, SaveType saveType, string autoGenIdColumn) where T : class
+        {
+            return SaveEntityList(new List<T>(new[] { entity }), table, identityColumns, saveType, autoGenIdColumn, false, null);
+        }
+
+        /// <summary>
+		/// Saves a list of entities to the database.
+		/// </summary>
+		/// <param name="entityList">List of entities to save.</param>
+		/// <param name="table">The name of the table to save to.</param>
+		/// <param name="identityColumns">Only used for Update and InsertOrUpdate. Must contain the columns that identify the entity (Case sensitive).</param>
+        /// <param name="saveType">To save or update the database, InsertOrUpdate handles a mixed list, but has a little overhead. FastInsert will not select the autogen column after an insert.</param>
+		/// <param name="autoGenIdColumn">If an autoincrement column is in the table, on insert it sets the new id to the inserted entitys corresponding property (Case sensitive).</param>
+		/// <returns>Returns true if all entities are saved/updated, else false.</returns>
+        public bool SaveEntities<T>(List<T> entityList, string table, string[] identityColumns, SaveType saveType, string autoGenIdColumn) where T : class
+        {
+            return SaveEntityList(entityList, table, identityColumns, saveType, autoGenIdColumn, false, null);
+        }
+
+        /// <summary>
+        /// Saves a list of entities to the database.
+        /// </summary>
+        /// <param name="entityList">List of entities to save.</param>
+        /// <param name="table">The name of the table to save to.</param>
+        /// <param name="identityColumns">Only used for Update and InsertOrUpdate. Must contain the columns that identify the entity (Case sensitive).</param>
+        /// <param name="saveType">To save or update the database, InsertOrUpdate handles a mixed list, but has a little overhead. FastInsert will not select the autogen column after an insert.</param>
+        /// <param name="autoGenIdColumn">If an autoincrement column is in the table, on insert it sets the new id to the inserted entitys corresponding property (Case sensitive).</param>
+        /// <param name="fetchAutoGenIdColumnOnUpdate">True if the auto gen id column should be fetched on update, on insert it already does</param>
+        /// <param name="propertiesToIgnore">Specify an array of property names, that should not be inserted/updated in the DB</param>
+        /// <returns>Returns true if all entities are saved/updated, else false.</returns>
+        public bool SaveEntities<T>(List<T> entityList, string table, string[] identityColumns, SaveType saveType, string autoGenIdColumn, bool fetchAutoGenIdColumnOnUpdate, string[] propertiesToIgnore) where T : class
+        {
+            return SaveEntityList(entityList, table, identityColumns, saveType, autoGenIdColumn, fetchAutoGenIdColumnOnUpdate, propertiesToIgnore);
+        }
+
         private bool SaveEntityList<T>(List<T> entities, string table, string[] identityColumns, SaveType saveType,
             string autoGenIdColumn, bool fetchAutoGenIdColumnOnUpdate, string[] propertiesToIgnore) where T : class
         {
