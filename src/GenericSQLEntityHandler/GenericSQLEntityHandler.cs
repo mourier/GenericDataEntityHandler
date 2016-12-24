@@ -548,6 +548,481 @@ namespace GenericSQLEntityHandler
 
         #endregion Save Methods
 
+        #region Load Methods
+        /// <summary>
+        /// Tries to load a single entity from the database.
+        /// </summary>
+        /// <param name="table">The name of the table to load from.</param>
+        /// <param name="filterDictionary">Search filters. Each entry in the Dictionary contains: 
+        /// Key: SQL string, ie. 'id > @id', 'birth = @birth' or 'name like '%br%' '.
+        /// Value: The object to replace @. If it's null, it will not be added to parameters there should not be a @ in the key.
+        /// Filter may be null if no search criteria!</param>
+        /// <param name="entity">When this method returns, contains the loaded value, if successful; otherwise, the value will be null. This parameter is passed uninitialized.</param>
+        /// <returns>Returns true if successful, else false.</returns>
+        public bool TryLoadSingleEntity<T>(string table, Dictionary<string, object> filterDictionary, out T entity) where T : class
+        {
+            entity = null;
+            List<T> entityList;
+            if (TryLoadEntities(table, filterDictionary, true, null, -1, out entityList))
+            {
+                if (entityList.Count != 0)
+                {
+                    entity = entityList[0];
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+		/// Load a single entity from the database.
+		/// </summary>
+		/// <param name="table">The name of the table to load from.</param>
+		/// <param name="filterDictionary">Search filters. Each entry in the Dictionary contains: 
+        /// Key: SQL string, ie. 'id > @id', 'birth = @birth' or 'name like '%br%' '.
+        /// Value: The object to replace @. If it's null, it will not be added to parameters there should not be a @ in the key.
+		/// Filter may be null if no search criteria!</param>
+		/// <returns>Returns the loaded entity if successful, else null.</returns>
+        public T LoadSingleEntity<T>(string table, Dictionary<string, object> filterDictionary) where T : class
+        {
+            T entity;
+            TryLoadSingleEntity(table, filterDictionary, out entity);
+            return entity;
+        }
+
+        /// <summary>
+        /// Tries to load a list of entities from the database.
+        /// </summary>
+        /// <param name="table">The name of the table to load from.</param>
+        /// <param name="filterDictionary">Search filters. Each entry in the Dictionary contains: 
+        /// Key: SQL string, ie. 'id > @id', 'birth = @birth' or 'name like '%br%' '.
+        /// Value: The object to replace @. If it's null, it will not be added to parameters there should not be a @ in the key.
+        /// Filter may be null if no search criteria!</param>
+        /// <param name="entityList">When this method returns, contains the loaded values, if successful; otherwise, the list will be null. This parameter is passed uninitialized.</param>
+        /// <returns>Returns true if successful, else false.</returns>
+        public bool TryLoadEntities<T>(string table, Dictionary<string, object> filterDictionary, out List<T> entityList) where T : class
+        {
+            return TryLoadEntities(table, filterDictionary, false, null, -1, out entityList);
+        }
+
+        /// <summary>
+        /// Loads a list of entities from the database.
+        /// </summary>
+        /// <param name="table">The name of the table to load from.</param>
+        /// <param name="filterDictionary">Search filters. Each entry in the Dictionary contains: 
+        /// Key: SQL string, ie. 'id > @id', 'birth = @birth' or 'name like '%br%' '.
+        /// Value: The object to replace @. If it's null, it will not be added to parameters there should not be a @ in the key.
+        /// Filter may be null if no search criteria!</param>
+        /// <returns>Returns a list of loaded entities if successful, else null.</returns>
+        public List<T> LoadEntities<T>(string table, Dictionary<string, object> filterDictionary) where T : class
+        {
+            List<T> entityList;
+            TryLoadEntities(table, filterDictionary, false, null, -1, out entityList);
+            return entityList;
+        }
+
+        /// <summary>
+        /// Tries to load a single entity from the database.
+        /// </summary>
+        /// <param name="table">The name of the table to load from.</param>
+        /// <param name="filterDictionary">Search filters. Each entry in the Dictionary contains: 
+        /// Key: SQL string, ie. 'id > @id', 'birth = @birth' or 'name like '%br%' '.
+        /// Value: The object to replace @. If it's null, it will not be added to parameters there should not be a @ in the key.
+        /// Filter may be null if no search criteria!</param>
+        /// <param name="orderBy">Order by string: ie: 'id DESC, name'.</param>
+        /// <param name="entity">When this method returns, contains the loaded value, if successful; otherwise, the value will be null. This parameter is passed uninitialized.</param>
+        /// <returns>Returns true if successful, else false.</returns>
+        public bool TryLoadSingleEntity<T>(string table, Dictionary<string, object> filterDictionary, string orderBy, out T entity) where T : class
+        {
+            entity = null;
+            List<T> entityList;
+            if (TryLoadEntities(table, filterDictionary, true, orderBy, -1, out entityList))
+            {
+                if (entityList.Count != 0)
+                {
+                    entity = entityList[0];
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Load a single entity from the database.
+        /// </summary>
+        /// <param name="table">The name of the table to load from.</param>
+        /// <param name="filterDictionary">Search filters. Each entry in the Dictionary contains: 
+        /// Key: SQL string, ie. 'id > @id', 'birth = @birth' or 'name like '%br%' '.
+        /// Value: The object to replace @. If it's null, it will not be added to parameters there should not be a @ in the key.
+        /// Filter may be null if no search criteria!</param>
+        /// <param name="orderBy">Order by string: ie: 'id DESC, name'.</param>
+        /// <returns>Returns the loaded entity if successful, else null.</returns>
+        public T LoadSingleEntity<T>(string table, Dictionary<string, object> filterDictionary, string orderBy) where T : class
+        {
+            T entity;
+            TryLoadSingleEntity(table, filterDictionary, orderBy, out entity);
+            return entity;
+        }
+
+        /// <summary>
+        /// Tries to load a list of entities from the database.
+        /// </summary>
+        /// <param name="table">The name of the table to load from.</param>
+        /// <param name="filterDictionary">Search filters. Each entry in the Dictionary contains: 
+        /// Key: SQL string, ie. 'id > @id', 'birth = @birth' or 'name like '%br%' '.
+        /// Value: The object to replace @. If it's null, it will not be added to parameters there should not be a @ in the key.
+        /// Filter may be null if no search criteria!</param>
+        /// <param name="orderBy">Sort by string: ie: 'id DESC, name'.</param>
+        /// <param name="entityList">When this method returns, contains the loaded values, if successful; otherwise, the list will be null. This parameter is passed uninitialized.</param>
+        /// <returns>Returns true if successful, else false.</returns>
+        public bool TryLoadEntities<T>(string table, Dictionary<string, object> filterDictionary, string orderBy, out List<T> entityList) where T : class
+        {
+            return TryLoadEntities(table, filterDictionary, false, orderBy, -1, out entityList);
+        }
+
+        /// <summary>
+        /// Loads a list of entities from the database.
+        /// </summary>
+        /// <param name="table">The name of the table to load from.</param>
+        /// <param name="filterDictionary">Search filters. Each entry in the Dictionary contains: 
+        /// Key: SQL string, ie. 'id > @id', 'birth = @birth' or 'name like '%br%' '.
+        /// Value: The object to replace @. If it's null, it will not be added to parameters there should not be a @ in the key.
+        /// Filter may be null if no search criteria!</param>
+        /// <param name="orderBy">Sort by string: ie: 'id DESC, name'.</param>
+        /// <returns>Returns a list of loaded entities if successful, else null.</returns>
+        public List<T> LoadEntities<T>(string table, Dictionary<string, object> filterDictionary, string orderBy) where T : class
+        {
+            List<T> entityList;
+            TryLoadEntities(table, filterDictionary, orderBy, out entityList);
+            return entityList;
+        }
+
+        /// <summary>
+        /// Tries to load a list of entities from the database.
+        /// </summary>
+        /// <param name="table">The name of the table to load from.</param>
+        /// <param name="filterDictionary">Search filters. Each entry in the Dictionary contains: 
+        /// Key: SQL string, ie. 'id > @id', 'birth = @birth' or 'name like '%br%' '.
+        /// Value: The object to replace @. If it's null, it will not be added to parameters there should not be a @ in the key.
+        /// Filter may be null if no search criteria!</param>
+        /// <param name="orderBy">Sort by string: ie: 'id DESC, name'</param>
+        /// <param name="maxRowCount">Max row count. A value of -1 means all.</param>
+        /// <param name="entityList">When this method returns, contains the loaded values, if successful; otherwise, the list will be null. This parameter is passed uninitialized.</param>
+        /// <returns>Returns true if successful, else false.</returns>
+        public bool TryLoadEntities<T>(string table, Dictionary<string, object> filterDictionary, string orderBy, int maxRowCount, out List<T> entityList) where T : class
+        {
+            return TryLoadEntities(table, filterDictionary, false, orderBy, maxRowCount, out entityList);
+        }
+
+        /// <summary>
+        /// Loads a list of entities from the database.
+        /// </summary>
+        /// <param name="table">The name of the table to load from.</param>
+        /// <param name="filterDictionary">Search filters. Each entry in the Dictionary contains: 
+        /// Key: SQL string, ie. 'id > @id', 'birth = @birth' or 'name like '%br%' '.
+        /// Value: The object to replace @. If it's null, it will not be added to parameters there should not be a @ in the key.
+        /// Filter may be null if no search criteria!</param>
+        /// <param name="orderBy">Sort by string: ie: 'id DESC, name'</param>
+        /// <param name="maxRowCount">Max row count. A value of -1 means all.</param>
+        /// <returns>Returns a list of loaded entities if successful, else null.</returns>
+        public List<T> LoadEntities<T>(string table, Dictionary<string, object> filterDictionary, string orderBy, int maxRowCount) where T : class
+        {
+            List<T> entityList;
+            TryLoadEntities(table, filterDictionary, orderBy, maxRowCount, out entityList);
+            return entityList;
+        }
+
+        /// <summary>
+        /// Tries to load a list of entities from the database.
+        /// </summary>
+        /// <param name="query">The sql query to execute.</param>
+        /// <param name="filterDictionary">Search filters. Each entry in the Dictionary contains: 
+        /// Key: SQL string, ie. 'id > @id', 'birth = @birth' or 'name like '%br%' '.
+        /// Value: The object to replace @. If it's null, it will not be added to parameters there should not be a @ in the key.
+        /// Filter may be null if no search criteria!</param>
+        /// <param name="orderBy">Sort by string: ie: 'id DESC, name'.</param>
+        /// <param name="entityList">When this method returns, contains the loaded values, if successful; otherwise, the list will be null. This parameter is passed uninitialized.</param>
+        /// <returns>Returns true if successful, else false.</returns>
+        public bool TryLoadEntitiesByQuery<T>(string query, ICollection<KeyValuePair<string, object>> filterDictionary, string orderBy, out List<T> entityList) where T : class
+        {
+            return TryLoadEntitiesByQuery(null, query, filterDictionary, orderBy, out entityList);
+        }
+
+        /// <summary>
+        /// Loads a list of entities from the database.
+        /// </summary>
+        /// <param name="query">The sql query to execute.</param>
+        /// <param name="filterDictionary">Search filters. Each entry in the Dictionary contains: 
+        /// Key: SQL string, ie. 'id > @id', 'birth = @birth' or 'name like '%br%' '.
+        /// Value: The object to replace @. If it's null, it will not be added to parameters there should not be a @ in the key.
+        /// Filter may be null if no search criteria!</param>
+        /// <param name="orderBy">Sort by string: ie: 'id DESC, name'.</param>
+        /// <returns>Returns a list of loaded entities if successful, else null.</returns>
+        public List<T> LoadEntitiesByQuery<T>(string query, ICollection<KeyValuePair<string, object>> filterDictionary, string orderBy) where T : class
+        {
+            return LoadEntitiesByQuery<T>(null, query, filterDictionary, orderBy);
+        }
+
+        /// <summary>
+        /// Tries to load a list of entities from the database.
+        /// </summary>
+        /// <param name="objectType">Alternative object type</param>
+        /// <param name="query">The sql query to execute.</param>
+        /// <param name="filterDictionary">Search filters. Each entry in the Dictionary contains: 
+        /// Key: SQL string, ie. 'id > @id', 'birth = @birth' or 'name like '%br%' '.
+        /// Value: The object to replace @. If it's null, it will not be added to parameters there should not be a @ in the key.
+        /// Filter may be null if no search criteria!</param>
+        /// <param name="orderBy">Sort by string: ie: 'id DESC, name'.</param>
+        /// <param name="entityList">When this method returns, contains the loaded values, if successful; otherwise, the list will be null. This parameter is passed uninitialized.</param>
+        /// <returns>Returns true if successful, else false.</returns>
+        public bool TryLoadEntitiesByQuery<T>(Type objectType, string query, ICollection<KeyValuePair<string, object>> filterDictionary, string orderBy, out List<T> entityList) where T : class
+        {
+            SqlDataReader reader = null;
+            SqlCommand cmd = GetSqlCommand();
+            Dictionary<string, string> columnsInBoth = new Dictionary<string, string>();
+            entityList = null;
+            Type entityType = null;
+
+            try
+            {
+                cmd.Parameters.Clear();
+                string sqlSelect = "";
+                sqlSelect = query;
+                if (filterDictionary != null && filterDictionary.Count > 0)
+                {
+                    if (!query.ToLower().Contains("where "))
+                    {
+                        sqlSelect += " WHERE ";
+                    }
+                    else if (!query.ToLower().EndsWith(" where "))
+                    {
+                        sqlSelect += " AND ";
+                    }
+
+                    int i = 0;
+                    foreach (KeyValuePair<string, object> conditionDE in filterDictionary)
+                    {
+                        sqlSelect += conditionDE.Key + " AND ";
+                        if (conditionDE.Value != null)
+                        {
+                            AddParameterToCmd(conditionDE.Value, cmd, "" + i++);
+                        }
+                    }
+                    sqlSelect = sqlSelect.Substring(0, sqlSelect.Length - 4);
+                }
+                // OrderBy part
+                if (!string.IsNullOrEmpty(orderBy))
+                {
+                    sqlSelect += " ORDER BY " + orderBy;
+                }
+
+                // retreive the data
+                cmd.CommandText = sqlSelect;
+                reader = cmd.ExecuteReader();
+                entityType = null;
+                if (objectType != null)
+                    entityType = objectType;
+                else
+                    entityType = typeof(T);
+                bool firstRecord = true;
+                entityList = new List<T>();
+                while (reader.Read())
+                {
+                    if (firstRecord)
+                    {
+                        Dictionary<string, string> tableColumns = GetTableColumns(reader);
+
+                        PropertyInfo[] propertyInfos = entityType.GetProperties();
+                        foreach (PropertyInfo propertyInfo in propertyInfos)
+                        {
+                            if (tableColumns.ContainsKey(propertyInfo.Name.ToLower()))
+                            {
+                                columnsInBoth.Add(propertyInfo.Name.ToLower(), propertyInfo.Name);
+                            }
+                        }
+                        firstRecord = false;
+                    }
+
+                    T entityObj = (T)Activator.CreateInstance(entityType);
+                    foreach (string columnName in columnsInBoth.Values)
+                    {
+                        object dbObj = reader[columnName];
+                        if (dbObj is DBNull)
+                        {
+                            // only handle properties, that can be set to null
+                            entityType.GetProperty(columnName).SetValue(entityObj, null, null);
+                        }
+                        else
+                        {
+                            entityType.GetProperty(columnName).SetValue(entityObj, dbObj, null);
+                        }
+                    }
+                    entityList.Add(entityObj);
+                }
+                reader.Close();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                string message = "";
+                message += "Entity type: " + entityType != null ? entityType.ToString() : "NULL" + Environment.NewLine;
+                message += "Query: " + query + Environment.NewLine;
+                if (filterDictionary != null && filterDictionary.Count != 0)
+                {
+                    message += "Filter: " + Environment.NewLine;
+                    foreach (KeyValuePair<string, object> pair in filterDictionary)
+                    {
+                        message += "\tKey: " + pair.Key + "\tValue: " + pair.Value + Environment.NewLine;
+                    }
+                }
+                message += "Error message: " + ex.Message + Environment.NewLine;
+                message += "Stacktrace: " + ex.StackTrace + Environment.NewLine;
+
+                Debug.WriteLine(message);
+
+                if (reader != null)
+                    reader.Close();
+                if (ErrorOccurred != null)
+                    ErrorOccurred(ex);
+            }
+            entityList = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Loads a list of entities from the database.
+        /// </summary>
+        /// <param name="objectType">Alternative object type</param>
+        /// <param name="query">The sql query to execute.</param>
+        /// <param name="filterDictionary">Search filters. Each entry in the Dictionary contains: 
+        /// Key: SQL string, ie. 'id > @id', 'birth = @birth' or 'name like '%br%' '.
+        /// Value: The object to replace @. If it's null, it will not be added to parameters there should not be a @ in the key.
+        /// Filter may be null if no search criteria!</param>
+        /// <param name="orderBy">Sort by string: ie: 'id DESC, name'.</param>
+        /// <returns>Returns a list of loaded entities if successful, else null.</returns>
+        public List<T> LoadEntitiesByQuery<T>(Type objectType, string query, ICollection<KeyValuePair<string, object>> filterDictionary, string orderBy) where T : class
+        {
+            List<T> entityList;
+            TryLoadEntitiesByQuery(objectType, query, filterDictionary, orderBy, out entityList);
+            return entityList;
+        }
+
+        private bool TryLoadEntities<T>(string table, ICollection<KeyValuePair<string, object>> filterDictionary, bool singleEntity, string orderBy, int maxRowCount, out List<T> entityList) where T : class
+        {
+            SqlDataReader reader = null;
+            SqlCommand cmd = GetSqlCommand();
+            Dictionary<string, string> columnsInBoth = new Dictionary<string, string>();
+            entityList = null;
+            Type entityType = null;
+
+            try
+            {
+                // find columns both in the table and the type
+                entityType = typeof(T);
+                Dictionary<string, string> tableColumns = GetTableColumns(cmd, table, entityType);
+
+                PropertyInfo[] propertyInfos = entityType.GetProperties();
+                foreach (PropertyInfo propertyInfo in propertyInfos)
+                {
+                    if (tableColumns.ContainsKey(propertyInfo.Name.ToLower()))
+                    {
+                        columnsInBoth.Add(propertyInfo.Name.ToLower(), propertyInfo.Name);
+                    }
+                }
+
+                if (columnsInBoth.Count == 0) // nothing fits
+                    return false;
+
+                cmd.Parameters.Clear();
+                // generate the select statement
+                // - Select part
+                string sqlSelect = "SELECT ";
+                if (singleEntity)
+                    sqlSelect += "TOP 1 ";
+                else if (maxRowCount != -1)
+                {
+                    sqlSelect += "TOP " + maxRowCount + " ";
+                }
+                foreach (string col in columnsInBoth.Values)
+                {
+                    sqlSelect += col + ", ";
+                }
+                sqlSelect = sqlSelect.Substring(0, sqlSelect.Length - 2);
+                sqlSelect += " FROM [" + table + "] ";
+                // - Where part
+                if (filterDictionary != null && filterDictionary.Count > 0)
+                {
+                    int i = 0;
+                    sqlSelect += " WHERE ";
+                    foreach (KeyValuePair<string, object> pair in filterDictionary)
+                    {
+                        sqlSelect += pair.Key + " AND ";
+                        if (pair.Value != null)
+                        {
+                            AddParameterToCmd(pair.Value, cmd, "" + i++);
+                        }
+                    }
+                    sqlSelect = sqlSelect.Substring(0, sqlSelect.Length - 4);
+                }
+                // OrderBy part
+                if (!string.IsNullOrEmpty(orderBy))
+                {
+                    sqlSelect += " ORDER BY " + orderBy;
+                }
+
+                // retreive the data
+                cmd.CommandText = sqlSelect;
+                reader = cmd.ExecuteReader();
+                entityList = new List<T>();
+                while (reader.Read())
+                {
+                    T entityObj = (T)Activator.CreateInstance(entityType);
+                    foreach (string columnName in columnsInBoth.Values)
+                    {
+                        object dbObj = reader[columnName];
+                        if (dbObj is DBNull)
+                        {
+                            // only handle properties, that can be set to null
+                            entityType.GetProperty(columnName).SetValue(entityObj, null, null);
+                        }
+                        else
+                        {
+                            entityType.GetProperty(columnName).SetValue(entityObj, dbObj, null);
+                        }
+                    }
+                    entityList.Add(entityObj);
+                }
+                reader.Close();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                string message = "";
+                message += "Entity type: " + entityType != null ? entityType.ToString() : "NULL" + Environment.NewLine;
+                if (filterDictionary != null && filterDictionary.Count != 0)
+                {
+                    message += "Filter: " + Environment.NewLine;
+                    foreach (KeyValuePair<string, object> pair in filterDictionary)
+                    {
+                        message += "\tKey: " + pair.Key + "\tValue: " + pair.Value + Environment.NewLine;
+                    }
+                }
+                message += "Error message: " + ex.Message + Environment.NewLine;
+                message += "Stacktrace: " + ex.StackTrace + Environment.NewLine;
+
+                Debug.WriteLine(message);
+
+                if (reader != null)
+                    reader.Close();
+                if (ErrorOccurred != null)
+                    ErrorOccurred(ex);
+            }
+            entityList = null;
+            return false;
+        }
+        #endregion Load Methods
+
 
         #region Helper Methods
 
