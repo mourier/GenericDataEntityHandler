@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 
@@ -45,18 +46,193 @@ namespace GenericSQLEntityHandler
 
         #region Save Methods
 
-        /// <summary>
-        /// Saves a single entity to the database.
-        /// </summary>
-        /// <param name="entity">The entity to save.</param>
-        /// <param name="table">The name of the table to save to.</param>
-        /// <param name="identityColumns">Only used for Update and InsertOrUpdate. Must contain the columns that identify the entity (Case sensitive).</param>
-        /// <param name="saveType">To save to or update the database, InsertOrUpdate handles a mixed list, but has a little overhead. FastInsert will not select the autogen column after an insert.</param>
-        /// <param name="autoGenIdColumn">If an autoincrement column is in the table, on insert it sets the new id to the inserted entitys corresponding property (Case sensitive).</param>
-        /// <returns>Returns true if the entity is saved/updated, else false.</returns>
-        public bool SaveEntity<T>(T entity, string table, string[] identityColumns, SaveType saveType, string autoGenIdColumn) where T : class
+        #region Bulk Save
+        public bool BulkInsert<T>(ICollection<T> entityList, string tableName, string[] columnNames) where T : class
         {
-            return SaveEntityList(new List<T>(new[] { entity }), table, identityColumns, saveType, autoGenIdColumn, false, null);
+            return BulkInsert(entityList, tableName, columnNames, null);
+        }
+
+        public bool BulkInsert<T>(ICollection<T> entityList, string tableName, string[] columnNames, string identityColumn) where T : class
+        {
+            return BulkSave(entityList, tableName, columnNames, identityColumn, false);
+        }
+
+        public bool BulkUpdate<T>(ICollection<T> entityList, string tableName, string[] columnNames, string identityColumn) where T : class
+        {
+            return BulkSave(entityList, tableName, columnNames, identityColumn, true);
+        }
+        public bool BulkSave<T>(ICollection<T> entities, string tableName, string[] columnNames, string identityColumn,
+            bool update, int bulkCopyTimeout = 600) where T : class
+        {
+            bool succes = false;
+
+            try
+            {
+                string destinationTableName;
+                bool identity = !string.IsNullOrEmpty(identityColumn);
+                if (identity)
+                    destinationTableName = "#tmp_" + tableName;
+                else
+                    destinationTableName = tableName;
+
+                Type entityType = typeof(T);
+                List<PropertyInfo> propertyInfos = new List<PropertyInfo>();
+                if(columnNames != null && columnNames.Length > 0)
+                {
+                    foreach (string columnName in columnNames)
+                    {
+                        propertyInfos.Add(entityType.GetProperty(columnName));
+                    }
+                }
+                else
+                {
+                    SqlCommand tempCommand = GetSqlCommand();
+                    Dictionary<string, string> tableColumns = GetTableColumns(tempCommand, tableName, entityType);
+                    tempCommand.Dispose();
+                    PropertyInfo[] allPropertyInfoss = entityType.GetProperties();
+                    foreach (PropertyInfo propertyInfo in allPropertyInfoss)
+                    {
+                        if (tableColumns.ContainsKey(propertyInfo.Name.ToLower()))
+                        {
+                            propertyInfos.Add(propertyInfo);
+                        }
+                    }
+                    tempCommand.Dispose();
+                }
+
+
+
+                SqlCommand cmd = GetSqlCommand();
+                SqlBulkCopy copy = new SqlBulkCopy(sqlConnection, update || identity ? SqlBulkCopyOptions.KeepIdentity : SqlBulkCopyOptions.Default, sqlTransaction);
+                copy.BulkCopyTimeout = bulkCopyTimeout;
+
+                try
+                {
+
+                    DataTable table = new DataTable();
+                    string columnNamesForQuery = "";
+                    foreach (PropertyInfo property in propertyInfos)
+                    {
+                        if (!identity || property.Name.ToLower() != identityColumn.ToLower())
+                        {
+                            if (!update)
+                                columnNamesForQuery += "[" + property.Name + "],";
+                            else
+                                columnNamesForQuery += "[" + tableName + "].[" + property.Name + "]=" + destinationTableName + ".[" + property.Name + "],";
+                        }
+                        if (property.PropertyType == typeof(int?))
+                        {
+                            DataColumn col = new DataColumn(property.Name, typeof(int));
+                            col.AllowDBNull = true;
+                            table.Columns.Add(col);
+                        }
+                        else
+                            table.Columns.Add(property.Name, property.PropertyType);
+                        copy.ColumnMappings.Add(property.Name, property.Name);
+                    }
+                    columnNamesForQuery = columnNamesForQuery.TrimEnd(',');
+                    DataRow row;
+                    int rowNumber = 1000;
+                    foreach (T entity in entities)
+                    {
+                        row = table.NewRow();
+                        int index = 0;
+                        foreach (PropertyInfo property in propertyInfos)
+                        {
+                            if (!update && identity && property.Name.ToLower() == identityColumn.ToLower())
+                            {
+                                property.SetValue(entity, rowNumber, null);
+                            }
+                            object val = property.GetValue(entity, null);
+                            if (val == null)
+                                row[index] = DBNull.Value;
+                            else
+                                row[index] = val;
+                            index++;
+                        }
+                        table.Rows.Add(row);
+                        rowNumber++;
+                    }
+
+                    copy.DestinationTableName = destinationTableName;
+                    copy.BatchSize = entities.Count;
+
+                    if (identity)
+                    {
+                        //Check if the temp table exists for some reason and then just reuse it if it does otherwise create it
+                        cmd.CommandText = "IF OBJECT_ID('tempdb.." + destinationTableName + "') IS NULL BEGIN SELECT 0 END ELSE SELECT 1";
+                        if ((int)cmd.ExecuteScalar() == 0)
+                            CreateTableClone(tableName, destinationTableName, entityType);
+                        else
+                            cmd.CommandText = "TRUNCATE TABLE " + destinationTableName;
+
+                        copy.WriteToServer(table);
+                        if (!update)
+                        {
+                            cmd.CommandText = "DECLARE @tmpIdTable TABLE (id INT) ";
+                            cmd.CommandText += "INSERT INTO [" + tableName + "] (" + columnNamesForQuery + ") ";
+                            cmd.CommandText += "OUTPUT inserted.[" + identityColumn + "] INTO @tmpIdTable ";
+                            cmd.CommandText += "SELECT " + columnNamesForQuery + " FROM " + destinationTableName;
+                            cmd.CommandText += " ORDER BY [" + identityColumn + "] ";
+                            cmd.CommandText += "SELECT [" + identityColumn + "] FROM @tmpIdTable ORDER BY [" + identityColumn + "]";
+                            using (SqlDataReader reader = cmd.ExecuteReader())
+                            {
+                                IEnumerator<T> enumerator = entities.GetEnumerator();
+                                while (reader.Read())
+                                {
+                                    enumerator.MoveNext();
+                                    entityType.GetProperty(identityColumn).SetValue(enumerator.Current, reader[0], null);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            cmd.CommandText = "UPDATE [" + tableName + "] SET " + columnNamesForQuery + " FROM " + destinationTableName;
+                            cmd.CommandText += " WHERE " + destinationTableName + ".[" + identityColumn + "]=[" + tableName + "].[" + identityColumn + "]";
+                            succes = cmd.ExecuteNonQuery() == entities.Count;
+                        }
+                        cmd.CommandText = "DROP TABLE " + destinationTableName;
+                        cmd.ExecuteNonQuery();
+                        cmd.Dispose();
+                    }
+                    else
+                        copy.WriteToServer(table);
+
+                    succes = true;
+                }
+                finally
+                {
+                    copy.Close();
+                }
+            }
+            catch (Exception exception)
+            {
+                string errorMessage = GenerateErrorMessage<T>(entities.Count > 0 ? entities.First().GetType() : null, tableName, (update ? SaveType.Update : SaveType.Insert), exception.Message,
+                    exception.StackTrace);
+
+
+
+                Debug.WriteLine(errorMessage);
+                ErrorOccurred?.Invoke(exception);
+            }
+
+            return succes;
+        }
+
+        #endregion Bulk Save
+
+            /// <summary>
+            /// Saves a single entity to the database.
+            /// </summary>
+            /// <param name="entity">The entity to save.</param>
+            /// <param name="table">The name of the table to save to.</param>
+            /// <param name="identityColumns">Only used for Update and InsertOrUpdate. Must contain the columns that identify the entity (Case sensitive).</param>
+            /// <param name="saveType">To save to or update the database, InsertOrUpdate handles a mixed list, but has a little overhead. FastInsert will not select the autogen column after an insert.</param>
+            /// <param name="autoGenIdColumn">If an autoincrement column is in the table, on insert it sets the new id to the inserted entitys corresponding property (Case sensitive).</param>
+            /// <returns>Returns true if the entity is saved/updated, else false.</returns>
+        public bool SaveEntity<T>(T entity, string tableName, string[] identityColumns, SaveType saveType, string autoGenIdColumn) where T : class
+        {
+            return SaveEntityList(new List<T>(new[] { entity }), tableName, identityColumns, saveType, autoGenIdColumn, false, null);
         }
 
         /// <summary>
@@ -68,9 +244,9 @@ namespace GenericSQLEntityHandler
         /// <param name="saveType">To save or update the database, InsertOrUpdate handles a mixed list, but has a little overhead. FastInsert will not select the autogen column after an insert.</param>
 		/// <param name="autoGenIdColumn">If an autoincrement column is in the table, on insert it sets the new id to the inserted entitys corresponding property (Case sensitive).</param>
 		/// <returns>Returns true if all entities are saved/updated, else false.</returns>
-        public bool SaveEntities<T>(List<T> entityList, string table, string[] identityColumns, SaveType saveType, string autoGenIdColumn) where T : class
+        public bool SaveEntities<T>(List<T> entityList, string tableName, string[] identityColumns, SaveType saveType, string autoGenIdColumn) where T : class
         {
-            return SaveEntityList(entityList, table, identityColumns, saveType, autoGenIdColumn, false, null);
+            return SaveEntityList(entityList, tableName, identityColumns, saveType, autoGenIdColumn, false, null);
         }
 
         /// <summary>
@@ -84,12 +260,12 @@ namespace GenericSQLEntityHandler
         /// <param name="fetchAutoGenIdColumnOnUpdate">True if the auto gen id column should be fetched on update, on insert it already does</param>
         /// <param name="propertiesToIgnore">Specify an array of property names, that should not be inserted/updated in the DB</param>
         /// <returns>Returns true if all entities are saved/updated, else false.</returns>
-        public bool SaveEntities<T>(List<T> entityList, string table, string[] identityColumns, SaveType saveType, string autoGenIdColumn, bool fetchAutoGenIdColumnOnUpdate, string[] propertiesToIgnore) where T : class
+        public bool SaveEntities<T>(List<T> entityList, string tableName, string[] identityColumns, SaveType saveType, string autoGenIdColumn, bool fetchAutoGenIdColumnOnUpdate, string[] propertiesToIgnore) where T : class
         {
-            return SaveEntityList(entityList, table, identityColumns, saveType, autoGenIdColumn, fetchAutoGenIdColumnOnUpdate, propertiesToIgnore);
+            return SaveEntityList(entityList, tableName, identityColumns, saveType, autoGenIdColumn, fetchAutoGenIdColumnOnUpdate, propertiesToIgnore);
         }
 
-        private bool SaveEntityList<T>(List<T> entities, string table, string[] identityColumns, SaveType saveType,
+        private bool SaveEntityList<T>(List<T> entities, string tableName, string[] identityColumns, SaveType saveType,
             string autoGenIdColumn, bool fetchAutoGenIdColumnOnUpdate, string[] propertiesToIgnore) where T : class
         {
             try
@@ -121,7 +297,7 @@ namespace GenericSQLEntityHandler
                     if (identityColumns.Length != 1)
                         throw new Exception("Only one identityColumn supported when using fetchAutoGenIdColumnOnUpdate");
                     cmd.Parameters.Clear();
-                    cmd.CommandText = "SELECT " + identityColumns[0] + ", " + autoGenIdColumn + " FROM " + table;
+                    cmd.CommandText = "SELECT " + identityColumns[0] + ", " + autoGenIdColumn + " FROM " + tableName;
                     using (SqlDataReader reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
@@ -133,7 +309,7 @@ namespace GenericSQLEntityHandler
                 }
 
                 //fetch table columns
-                Dictionary<string, string> tableColumns = GetTableColumns(cmd, table, entityType);
+                Dictionary<string, string> tableColumns = GetTableColumns(cmd, tableName, entityType);
 
 
                 if (saveType == SaveType.Insert)
@@ -150,9 +326,9 @@ namespace GenericSQLEntityHandler
                     // - generate the SQL
                     cmd.Parameters.Clear();
                     if (!string.IsNullOrEmpty(autoGenIdColumn))
-                        cmd.CommandText = "SELECT TOP 1 [" + autoGenIdColumn + "] FROM [" + table + "] WHERE ";
+                        cmd.CommandText = "SELECT TOP 1 [" + autoGenIdColumn + "] FROM [" + tableName + "] WHERE ";
                     else
-                        cmd.CommandText = "SELECT TOP 1 [" + identityColumns[0] + "] FROM [" + table + "] WHERE ";
+                        cmd.CommandText = "SELECT TOP 1 [" + identityColumns[0] + "] FROM [" + tableName + "] WHERE ";
                     foreach (string idColumn in identityColumns)
                     {
                         cmd.CommandText += idColumn + " = @" + idColumn + " AND ";
@@ -211,7 +387,7 @@ namespace GenericSQLEntityHandler
                     bool autoGenIdIsGuid = false;
                     List<PropertyInfo> propertiesToInsert = new List<PropertyInfo>();
 
-                    string sqlInsertInto = "INSERT INTO [" + table + "](";
+                    string sqlInsertInto = "INSERT INTO [" + tableName + "](";
                     string sqlParameters = "VALUES(";
                     // find the columns to insert into
                     PropertyInfo[] propertyInfos = entityType.GetProperties();
@@ -295,7 +471,7 @@ namespace GenericSQLEntityHandler
                 if (entitiesToUpdate.Count > 0)
                 {
                     cmd.Parameters.Clear();
-                    string sqlUpdate = "UPDATE [" + table + "] SET ";
+                    string sqlUpdate = "UPDATE [" + tableName + "] SET ";
                     string sqlWhere = " WHERE ";
                     List<PropertyInfo> whereProperties = new List<PropertyInfo>();
                     List<PropertyInfo> setProperties = new List<PropertyInfo>();
@@ -360,7 +536,7 @@ namespace GenericSQLEntityHandler
             }
             catch (Exception exception)
             {
-                string errorMessage = GenerateErrorMessage<T>(entities.Count > 0 ? entities[0].GetType() : null, table, saveType, exception.Message,
+                string errorMessage = GenerateErrorMessage<T>(entities.Count > 0 ? entities[0].GetType() : null, tableName, saveType, exception.Message,
                     exception.StackTrace);
 
                 Debug.WriteLine(errorMessage);
@@ -462,6 +638,19 @@ namespace GenericSQLEntityHandler
             cmd.Parameters.AddWithValue("@" + idColumn, fieldObj ?? DBNull.Value);
         }
 
+        public bool CreateTableClone(string sourceTableName, string newName, Type entityType)
+        {
+            SQLTableCreator creator = new SQLTableCreator(sqlConnection, sqlTransaction);
+            SqlCommand cmd = GetSqlCommand();
+
+            cmd.CommandText = "SELECT TOP 1 * FROM [" + sourceTableName + "]";
+            SqlDataReader reader = cmd.ExecuteReader();
+            DataTable dataTable = reader.GetSchemaTable();
+            reader.Close();
+            cmd.Dispose();
+            creator.Create(dataTable, newName, entityType);
+            return true;
+        }
         #endregion Helper Methods
     }
 }

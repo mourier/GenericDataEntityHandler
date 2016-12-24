@@ -38,6 +38,10 @@ namespace GenericSQLEntityHandler
         #endregion Constructor
 
         #region Methods
+        public bool Create(DataTable schema, string destinationTableName, Type entityType)
+        {
+            return Create(schema, null, destinationTableName, entityType);
+        }
         public bool Create(DataTable schema, int[] primaryKeys, string destinationTableName, Type entityType)
         {
             try
