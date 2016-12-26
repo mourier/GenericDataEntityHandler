@@ -1023,6 +1023,141 @@ namespace GenericSQLEntityHandler
         }
         #endregion Load Methods
 
+        #region Delete
+
+        /// <summary>
+        /// Deletes an entity from the database.
+        /// </summary>
+        /// <param name="entity">The entity to delete.</param>
+        /// <param name="table">The name of the table to delete from.</param>
+        /// <param name="identityColumns">Must contain the columns that identify the entity (Case sensitive).</param>
+        /// <returns>Returns true if successful, else false.</returns>
+        public bool DeleteEntity<T>(T entity, string tableName, string[] identityColumns) where T : class
+        {
+            return DeleteEntitiesFromList(new List<T> { entity }, tableName, identityColumns);
+        }
+
+        /// <summary>
+        /// Deletes a list of entities from the database.
+        /// </summary>
+        /// <param name="entityList">List of entities to delete.</param>
+        /// <param name="table">The name of the table to delete from.</param>
+        /// <param name="identityColumns">Must contain the columns that identify the entity (Case sensitive).</param>
+        /// <returns>Returns true if successful, else false. If an entity fails, the rest of the list will not be deleted.</returns>
+        public bool DeleteEntities<T>(List<T> entityList, string tableName, string[] identityColumns) where T : class
+        {
+            return DeleteEntitiesFromList(entityList, tableName, identityColumns);
+        }
+
+        /// <summary>
+        /// Deletes from a table using conditions.
+        /// </summary>
+        /// <param name="table">The name of the table to delete from.</param>
+        /// <param name="filterDictionary">Search filters. Each entry in the Dictionary contains: 
+        /// Key: SQL string, ie. 'id > @id', 'birth = @birth' or 'name like '%br%' '.
+        /// Value: The object to replace @. If it's null, it will not be added to parameters there should not be a @ in the key.
+        /// Filter may be null if no search criteria!</param>
+        /// <param name="affectedRows">The number of deleted rows.</param>
+        /// <returns>True if the query succeeded - no matter if anything was deleted.</returns>
+        public bool DeleteViaConditions(string tableName, Dictionary<string, object> filterDictionary, out int affectedRows)
+        {
+            affectedRows = 0;
+
+            try
+            {
+                SqlCommand cmd = GetSqlCommand();
+                string sqlDelete = "DELETE FROM [" + tableName + "] WHERE ";
+                if (filterDictionary != null && filterDictionary.Count > 0)
+                {
+                    int i = 0;
+                    foreach (KeyValuePair<string, object> pair in filterDictionary)
+                    {
+
+                        sqlDelete += pair.Key + " AND ";
+                        if (pair.Value != null)
+                        {
+                            AddParameterToCmd(pair.Value, cmd, "" + i++);
+                        }
+                    }
+                }
+                else
+                {
+                    sqlDelete = sqlDelete.Substring(0, sqlDelete.Length - 2);
+                }
+                cmd.CommandText = sqlDelete.Substring(0, sqlDelete.Length - 4);
+                affectedRows = cmd.ExecuteNonQuery();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                string message = "";
+                message += "Table name: " + tableName + Environment.NewLine;
+                if (filterDictionary != null && filterDictionary.Count != 0)
+                {
+                    message += "Filter: " + Environment.NewLine;
+                    foreach (KeyValuePair<string, object> pair in filterDictionary)
+                    {
+                        message += "\tKey: " + pair.Key + "\tValue: " + pair.Value + Environment.NewLine;
+                    }
+                }
+                message += "Error message: " + ex.Message + Environment.NewLine;
+                message += "Stacktrace: " + ex.StackTrace + Environment.NewLine;
+
+                Debug.WriteLine(message);
+                if (ErrorOccurred != null)
+                    ErrorOccurred(ex);
+                return false;
+            }
+        }
+
+        private bool DeleteEntitiesFromList<T>(List<T> entityList, string tableName, IEnumerable<string> identityColumns) where T : class
+        {
+            Type entityType = null;
+            try
+            {
+                if (entityList.Count == 0) // no entities... returns true
+                    return true;
+
+                SqlCommand cmd = GetSqlCommand();
+                entityType = entityList[0].GetType();
+
+                // - generate the SQL
+                cmd.Parameters.Clear();
+                cmd.CommandText = "DELETE FROM [" + tableName + "] WHERE ";
+                foreach (string idColumn in identityColumns)
+                {
+                    cmd.CommandText += idColumn + " = @" + idColumn + " AND ";
+                }
+                cmd.CommandText = cmd.CommandText.Substring(0, cmd.CommandText.Length - 4);
+
+                foreach (T entity in entityList)
+                {
+                    cmd.Parameters.Clear();
+                    foreach (string idColumn in identityColumns) // add parameters for each entitys identity columns
+                    {
+                        PropertyInfo propertyInfo = entityType.GetProperty(idColumn);
+                        object fieldObj = propertyInfo.GetValue(entity, null);
+                        AddParameterToCmd(fieldObj, cmd, idColumn);
+                    }
+                    int affectedRows = cmd.ExecuteNonQuery();
+                    if (affectedRows == 0) // error - nothing deleted
+                        return false;
+                }
+            }
+            catch (Exception exception)
+            {
+                string errorMessage = GenerateErrorMessage<T>(entityList.Count > 0 ? entityList[0].GetType() : null, tableName, exception.Message,
+                  exception.StackTrace);
+
+                Debug.WriteLine(errorMessage);
+                ErrorOccurred?.Invoke(exception);
+                return false;
+            }
+            return true;
+        }
+
+        #endregion Delete
+
 
         #region Helper Methods
 
@@ -1033,6 +1168,19 @@ namespace GenericSQLEntityHandler
 
             message += "Table name: " + table + Environment.NewLine;
             message += "Save type: " + saveType + Environment.NewLine;
+            message += "Error message: " + exceptionMessage + Environment.NewLine;
+            message += "Stacktrace: " + stacktrace + Environment.NewLine;
+
+            return message;
+        }
+
+        private string GenerateErrorMessage<T>(Type entityType, string table, string exceptionMessage, string stacktrace) where T : class
+        {
+            string message = "";
+            message += "Entity type: " + entityType ?? "NULL" + Environment.NewLine;
+
+            message += "Table name: " + table + Environment.NewLine;
+            message += "Save type: " + "DELETE" + Environment.NewLine;
             message += "Error message: " + exceptionMessage + Environment.NewLine;
             message += "Stacktrace: " + stacktrace + Environment.NewLine;
 
@@ -1103,6 +1251,21 @@ namespace GenericSQLEntityHandler
                     }
                     columnInformationList[type] = tableColumns;
                     dataTable.Dispose();
+                }
+            }
+            return tableColumns;
+        }
+
+        public Dictionary<string, string> GetTableColumns(SqlDataReader reader)
+        {
+            Dictionary<string, string> tableColumns = new Dictionary<string, string>();
+            DataTable dataTable = reader.GetSchemaTable();
+            // Put the column names in list, to make them easier to work with
+            if (dataTable != null)
+            {
+                foreach (DataRow row in dataTable.Rows)
+                {
+                    tableColumns[(row["ColumnName"] + "").ToLower()] = "" + row["DataType"];
                 }
             }
             return tableColumns;
