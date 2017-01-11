@@ -58,20 +58,65 @@ namespace GenericSQLEntityHandler
                 return entityDataHandler.SaveEntities(entities, tableName ?? typeof(T).Name, keys, SaveType.InsertOrUpdate, identity);
             }
         }
-        #endregion Save Methods
 
-        #region Load Methods
-
-        #region Connection Depending
         /// <summary>
-        /// Load single entity from database
+        /// Save a list of entities to the database
         /// </summary>
-        /// <typeparam name="T">entity type</typeparam>
-        /// <param name="connection">connection to database</param>
-        /// <param name="keyValue"></param>
+        /// <param name="connection">Current active SQL connection</param>
+        /// <param name="entities">list of entities that needs to be committed to the database</param>
+        /// <param name="keys"></param>
         /// <param name="identity">coloumn in database the represents the id</param>
         /// <param name="tableName">name of sqltable - if null, will use entitytype name as tablename</param>
-        /// <returns>found entity of the specified type or null if nothing is found or caused an exception</returns>
+        /// <typeparam name="T">entity type</typeparam>
+        /// <returns>true or false for success status</returns>
+        public static bool Save<T>(SqlConnection connection, List<T> entities, string[] keys = null, string identity = "Id",
+            string tableName = null) where T : class
+        {
+            ValidateConnection(connection);
+
+            if (keys == null || keys.Length == 0)
+                keys = new[] { identity };
+
+            GenericSQLEntityHandler entityDataHandler = new GenericSQLEntityHandler(connection);
+            return entityDataHandler.SaveEntities(entities, tableName ?? typeof(T).Name, keys, SaveType.InsertOrUpdate, identity);
+        }
+
+        /// <summary>
+        /// Save a single entity to the database
+        /// </summary>
+        /// <param name="connection">Current active SQL connection</param>
+        /// <param name="entity">entity that needs to be committed to the database</param>
+        /// <param name="keys"></param>
+        /// <param name="identity">coloumn in database the represents the id</param>
+        /// <param name="tableName">name of sqltable - if null, will use entitytype name as tablename</param>
+        /// <typeparam name="T">entity type</typeparam>
+        /// <returns>true or false for success status</returns>
+        public static bool Save<T>(SqlConnection connection, T entity, string[] keys = null, string identity = "Id",
+            string tableName = null) where T : class
+        {
+            ValidateConnection(connection);
+
+            if (keys == null || keys.Length == 0)
+                keys = new[] { identity };
+
+            GenericSQLEntityHandler entityDataHandler = new GenericSQLEntityHandler(connection);
+            return entityDataHandler.SaveEntity(entity, tableName ?? typeof(T).Name, keys, SaveType.InsertOrUpdate, identity);
+        }
+
+        #endregion Save Methods
+
+            #region Load Methods
+
+            #region Connection Depending
+            /// <summary>
+            /// Load single entity from database
+            /// </summary>
+            /// <typeparam name="T">entity type</typeparam>
+            /// <param name="connection">connection to database</param>
+            /// <param name="keyValue"></param>
+            /// <param name="identity">coloumn in database the represents the id</param>
+            /// <param name="tableName">name of sqltable - if null, will use entitytype name as tablename</param>
+            /// <returns>found entity of the specified type or null if nothing is found or caused an exception</returns>
         public static T Load<T>(SqlConnection connection, object keyValue, string identity = "Id",
             string tableName = null) where T : class
         {
