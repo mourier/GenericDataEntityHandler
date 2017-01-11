@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
@@ -60,6 +61,226 @@ namespace GenericSQLEntityHandler
         #endregion Save Methods
 
         #region Load Methods
+
+        #region Connection Depending
+        /// <summary>
+        /// Load single entity from database
+        /// </summary>
+        /// <typeparam name="T">entity type</typeparam>
+        /// <param name="connection">connection to database</param>
+        /// <param name="keyValue"></param>
+        /// <param name="identity">coloumn in database the represents the id</param>
+        /// <param name="tableName">name of sqltable - if null, will use entitytype name as tablename</param>
+        /// <returns>found entity of the specified type or null if nothing is found or caused an exception</returns>
+        public static T Load<T>(SqlConnection connection, object keyValue, string identity = "Id",
+            string tableName = null) where T : class
+        {
+            try
+            {
+                ValidateConnection(connection);
+
+                Dictionary<string, object> filter = new Dictionary<string, object>();
+                filter[identity += "=@0"] = keyValue;
+                GenericSQLEntityHandler entityHandler = new GenericSQLEntityHandler(connection);
+                return entityHandler.LoadSingleEntity<T>(tableName ?? typeof(T).Name, filter);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.ToString());
+                return null;
+
+            }
+        }
+
+
+        /// <summary>
+        /// Load single entity from database.
+        /// </summary>
+        /// <typeparam name="T">entity type</typeparam>
+        /// <param name="connection">current active sql connection</param>
+        /// <param name="filter">filter made in [string key, object value]</param>
+        /// <param name="identity">coloumn in database the represents the id</param>
+        /// <param name="tableName">name of sqltable - if null, will use entitytype name as tablename</param>
+        /// <returns>found entity of the specified type or null if nothing is found or caused an exception</returns>
+        public static T Load<T>(SqlConnection connection, Dictionary<string, object> filter = null, string identity = "Id",
+            string tableName = null) where T : class
+        {
+            try
+            {
+                ValidateConnection(connection);
+
+                GenericSQLEntityHandler entityHandler = new GenericSQLEntityHandler(connection);
+                return entityHandler.LoadSingleEntity<T>(tableName ?? typeof(T).Name, filter);
+
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.ToString());
+                return null;
+
+            }
+        }
+
+        /// <summary>
+        /// Get list of entities from database
+        /// </summary>
+        /// <typeparam name="T">Entity type</typeparam>
+        /// <param name="connection">Current active sql connection</param>
+        /// <param name="tableName">name of talbe, if not provided - classname will be used</param>
+        /// <returns>List of found items of type T</returns>
+        public static List<T> LoadList<T>(SqlConnection connection, string tableName = null) where T : class
+        {
+            try
+            {
+                ValidateConnection(connection);
+
+                GenericSQLEntityHandler entityHandler = new GenericSQLEntityHandler(connection);
+                
+                return entityHandler.LoadEntities<T>(tableName ?? typeof(T).Name, new Dictionary<string, object>());
+            }
+            catch (SqlException ex)
+            {
+                Debug.Write(ex.ToString());
+                return null;
+            }
+        }
+        /// <summary>
+        /// Get list of enities from database, based on filter
+        /// </summary>
+        /// <typeparam name="T">Entity type</typeparam>
+        /// <param name="connection">Current active SQL connection</param>
+        /// <param name="filter">filter made in [string key, object value]</param>
+        /// <param name="tableName">name of sqltable - if null, will use entitytype name as tablename</param>
+        /// <returns>List of T</returns>
+        public static List<T> LoadList<T>(SqlConnection connection, Dictionary<string, object> filter, string tableName = null)
+            where T : class
+        {
+            try
+            {
+                ValidateConnection(connection);
+                    connection.Open();
+
+                GenericSQLEntityHandler entityHandler = new GenericSQLEntityHandler(connection);
+                return entityHandler.LoadEntities<T>(tableName ?? typeof(T).Name, filter ?? new Dictionary<string, object>());
+            }
+            catch (SqlException ex)
+            {
+                Debug.Write(ex.ToString());
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Loads list of T from query.
+        /// </summary>
+        /// <typeparam name="T">Entity type</typeparam>
+        /// <param name="connection">Current active SQL connection</param>
+        /// <param name="query">Select query</param>
+        /// <param name="keyValue"></param>
+        /// <param name="identity">Identity column</param>
+        /// <param name="orderBy">Column to order result by</param>
+        /// <returns>List of T</returns>
+        public static List<T> LoadListByQuery<T>(SqlConnection connection, string query, object keyValue,
+            string identity = "Id", string orderBy = "") where T : class
+        {
+            try
+            {
+                ValidateConnection(connection);
+
+                Dictionary<string, object> filter = new Dictionary<string, object>();
+                if (keyValue != null)
+                    filter[identity += "=@0"] = keyValue;
+                GenericSQLEntityHandler entityHandler = new GenericSQLEntityHandler(connection);
+                return entityHandler.LoadEntitiesByQuery<T>(query, filter, orderBy);
+
+            }
+            catch (SqlException ex)
+            {
+                Debug.Write(ex.ToString());
+                return null;
+            }
+
+        }
+        /// <summary>
+        /// Get list of entities from database by query
+        /// </summary>
+        /// <typeparam name="T">enitity type</typeparam>
+        /// <param name="connection">Current active SQL connection</param>
+        /// <param name="query">sql query</param>
+        /// <param name="filter"></param>
+        /// <param name="orderBy">how to order / sort the results</param>
+        /// <returns>list of specified entities if found</returns>
+        public static List<T> LoadListByQuery<T>(SqlConnection connection, string query, Dictionary<string, object> filter,
+            string orderBy = "") where T : class
+        {
+            try
+            {
+                ValidateConnection(connection);
+                GenericSQLEntityHandler entityHandler = new GenericSQLEntityHandler(connection);
+                return entityHandler.LoadEntitiesByQuery<T>(query, filter, orderBy);
+
+            }
+            catch (SqlException ex)
+            {
+                Debug.Write(ex.ToString());
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Get a single antity from database, by custom query
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="connection">Current active SQL connection</param>
+        /// <param name="query">sql query</param>
+        /// <param name="keyValue"></param>
+        /// <param name="identity">coloumn in database the represents the id</param>
+        /// <returns>single entity found be query</returns>
+        public static T LoadByQuery<T>(SqlConnection connection, string query, object keyValue, string identity = "Id")
+            where T : class
+        {
+            try
+            {
+                ValidateConnection(connection);
+                var result = LoadListByQuery<T>(connection, query, keyValue, identity)?.FirstOrDefault();
+
+                return result;
+            }
+            catch (SqlException ex)
+            {
+                Debug.Write(ex.ToString());
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Get a single antity from database, by custom query
+        /// </summary>
+        /// <typeparam name="T">entity type</typeparam>
+        /// <param name="connection">Current active SQL connection</param>
+        /// <param name="query">sql query</param>
+        /// <param name="filter"></param>
+        /// <returns>single entity found be query</returns>
+        public static T LoadByQuery<T>(SqlConnection connection, string query, Dictionary<string, object> filter)
+            where T : class
+        {
+            try
+            {
+                ValidateConnection(connection);
+
+                var result = LoadListByQuery<T>(connection, query, filter);
+                return result?.FirstOrDefault();
+            }
+            catch (SqlException ex)
+            {
+                Debug.Write(ex.ToString());
+                return null;
+            }
+        }
+
+        #endregion Connection Depending
+
+
 
         /// <summary>
         /// Load single entity from database.
@@ -288,5 +509,17 @@ namespace GenericSQLEntityHandler
             }
         }
         #endregion Load
+
+        #region Private methods
+        private static void ValidateConnection(SqlConnection connection)
+        {
+            if (connection == null)
+                throw new Exception("COnnection cannot be null - please privide valid connection");
+
+            if (connection.State == ConnectionState.Closed)
+                connection.Open();
+        }
+
+        #endregion Private methods
     }
 }
