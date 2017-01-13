@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -105,18 +106,18 @@ namespace GenericSQLEntityHandler
 
         #endregion Save Methods
 
-            #region Load Methods
+        #region Load Methods
 
-            #region Connection Depending
-            /// <summary>
-            /// Load single entity from database
-            /// </summary>
-            /// <typeparam name="T">entity type</typeparam>
-            /// <param name="connection">connection to database</param>
-            /// <param name="keyValue"></param>
-            /// <param name="identity">coloumn in database the represents the id</param>
-            /// <param name="tableName">name of sqltable - if null, will use entitytype name as tablename</param>
-            /// <returns>found entity of the specified type or null if nothing is found or caused an exception</returns>
+        #region Connection Depending
+        /// <summary>
+        /// Load single entity from database
+        /// </summary>
+        /// <typeparam name="T">entity type</typeparam>
+        /// <param name="connection">connection to database</param>
+        /// <param name="keyValue"></param>
+        /// <param name="identity">coloumn in database the represents the id</param>
+        /// <param name="tableName">name of sqltable - if null, will use entitytype name as tablename</param>
+        /// <returns>found entity of the specified type or null if nothing is found or caused an exception</returns>
         public static T Load<T>(SqlConnection connection, object keyValue, string identity = "Id",
             string tableName = null) where T : class
         {
@@ -554,6 +555,186 @@ namespace GenericSQLEntityHandler
             }
         }
         #endregion Load
+
+        #region Delete Methods
+
+        /// <summary>
+        /// Delete single entity from database
+        /// </summary>
+        /// <param name="connection">Current active connection/param>
+        /// <param name="entity">the single entity that needs to be deleted from database</param>
+        /// <param name="keys"></param>
+        /// <param name="identity">coloumn in database the represents the id</param>
+        /// <param name="tableName">name of sqltable - if null, will use entitytype name as tablename</param>
+        /// <typeparam name="T">entity type</typeparam>
+        /// <returns>true or false for success status</returns>
+        public static bool Delete<T>(SqlConnection connection, T entity, string[] keys = null, string identity = "Id",
+            string tableName = null) where T : class
+        {
+            try
+            {
+                ValidateConnection(connection);
+                GenericSQLEntityHandler entityHandler = new GenericSQLEntityHandler(connection);
+                return entityHandler.DeleteEntity(entity, tableName ?? typeof(T).Name, keys);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.ToString());
+                return false;
+
+            }
+        }
+
+        /// <summary>
+        /// Delete multiple entities from the database
+        /// </summary>
+        /// <param name="connection">Current active connection</param>
+        /// <param name="entities">list of entities that needs to be deleted from database</param>
+        /// <param name="keys"></param>
+        /// <param name="identity">coloumn in database the represents the id</param>
+        /// <param name="tableName">name of sqltable - if null, will use entitytype name as tablename</param>
+        /// <typeparam name="T">entity type</typeparam>
+        /// <returns>true or false for success status</returns>
+        public static bool Delete<T>(SqlConnection connection, List<T> entities, string[] keys = null, string identity = "Id",
+            string tableName = null) where T : class
+        {
+            try
+            {
+                ValidateConnection(connection);
+                GenericSQLEntityHandler entityHandler = new GenericSQLEntityHandler(connection);
+                return entityHandler.DeleteEntities(entities, tableName ?? typeof(T).Name, keys);
+
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.ToString());
+                return false;
+
+            }
+        }
+
+        /// <summary>
+        /// Delete items from table with from filter
+        /// </summary>
+        /// <param name="connection">Current active connection</param>
+        /// <param name="table">name of table to delete from</param>
+        /// <param name="filter"></param>
+        /// <returns>number of affected rows</returns>
+        public static int DeleteFromTable(SqlConnection connection, string table, Dictionary<string, object> filter)
+        {
+            try
+            {
+                ValidateConnection(connection);
+
+                GenericSQLEntityHandler entityHandler = new GenericSQLEntityHandler(connection);
+                int affectedRows;
+                entityHandler.DeleteViaConditions(table, filter, out affectedRows);
+                return affectedRows;
+
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.ToString());
+                return -1;
+
+            }
+        }
+
+        /// <summary>
+        /// Deletes every thing from the specified table in database
+        /// </summary>
+        /// <param name="connection">Currennt active connection</param>
+        /// <param name="table"></param>
+        /// <returns>number of affected rows</returns>
+        public static int DeleteAllFromTable(SqlConnection connection, string table)
+        {
+            try
+            {
+                ValidateConnection(connection);
+                return DeleteFromTable(connection, table, null);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.ToString());
+                return -1;
+
+            }
+        }
+
+
+        /// <summary>
+        /// Delete single entity from database
+        /// </summary>
+        /// <param name="connString">connection string</param>
+        /// <param name="entity">the single entity that needs to be deleted from database</param>
+        /// <param name="keys"></param>
+        /// <param name="identity">coloumn in database the represents the id</param>
+        /// <param name="tableName">name of sqltable - if null, will use entitytype name as tablename</param>
+        /// <typeparam name="T">entity type</typeparam>
+        /// <returns>true or false for success status</returns>
+        public static bool Delete<T>(string connString, T entity, string[] keys = null, string identity = "Id", string tableName = null) where T : class
+        {
+            if (keys == null || keys.Length == 0)
+                keys = new[] { identity };
+
+            using (SqlConnection connection = new SqlConnection(connString))
+            {
+                connection.Open();
+                return Delete(connection, entity, keys, identity, tableName);
+            }
+        }
+
+        /// <summary>
+        /// Delete multiple entities from the database
+        /// </summary>
+        /// <param name="connString">connection string</param>
+        /// <param name="entities">list of entities that needs to be deleted from database</param>
+        /// <param name="keys"></param>
+        /// <param name="identity">coloumn in database the represents the id</param>
+        /// <param name="tableName">name of sqltable - if null, will use entitytype name as tablename</param>
+        /// <typeparam name="T">entity type</typeparam>
+        /// <returns>true or false for success status</returns>
+        public static bool Delete<T>(string connString, List<T> entities, string[] keys = null, string identity = "Id", string tableName = null) where T : class
+        {
+            if (keys == null || keys.Length == 0)
+                keys = new[] { identity };
+
+            using (SqlConnection connection = new SqlConnection(connString))
+            {
+                connection.Open();
+                return Delete(connection, entities, keys, identity, tableName);
+            }
+        }
+
+
+        /// <summary>
+        /// Delete items from table with from filter
+        /// </summary>
+        /// <param name="connString">connection string</param>
+        /// <param name="table">name of table to delete from</param>
+        /// <param name="filter"></param>
+        /// <returns>number of affected rows</returns>
+        public static int DeleteFromTable(string connString, string table, Dictionary<string, object> filter)
+        {
+            using (SqlConnection connection = new SqlConnection(connString))
+            {
+                connection.Open();
+                return DeleteFromTable(connection, table, filter);
+            }
+        }
+
+        /// <summary>
+        /// Deletes every thing from the specified table in database
+        /// </summary>
+        /// <param name="connString">connection string</param>
+        /// <param name="table"></param>
+        /// <returns>number of affected rows</returns>
+        public static int DeleteAllFromTable(string connString, string table)
+        {
+            return DeleteFromTable(connString, table, null);
+        }
+
+        #endregion Delete Methods
 
         #region Private methods
         private static void ValidateConnection(SqlConnection connection)
