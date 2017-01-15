@@ -4,7 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
 
-namespace GenericSQLEntityHandler
+namespace EntityHandler
 {
     public class SQLTableCreator
     {
