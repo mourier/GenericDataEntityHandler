@@ -21,7 +21,7 @@ namespace EntityHandler
         private string reconnectSqlConnectionString = "";
 
         private SqlTransaction sqlTransaction = null;
-        private SqlConnection sqlConnection = null;
+        
 
         private Dictionary<Type, Dictionary<string, string>> columnInformationList = new Dictionary<Type, Dictionary<string, string>>();
 
@@ -103,7 +103,7 @@ namespace EntityHandler
 
 
                 SqlCommand cmd = GetSqlCommand();
-                SqlBulkCopy copy = new SqlBulkCopy(sqlConnection, update || identity ? SqlBulkCopyOptions.KeepIdentity : SqlBulkCopyOptions.Default, sqlTransaction);
+                SqlBulkCopy copy = new SqlBulkCopy(SqlConnection, update || identity ? SqlBulkCopyOptions.KeepIdentity : SqlBulkCopyOptions.Default, sqlTransaction);
                 copy.BulkCopyTimeout = bulkCopyTimeout;
 
                 try
@@ -1191,9 +1191,9 @@ namespace EntityHandler
         {
             SqlCommand sqlCommand;
             if (sqlTransaction != null && sqlTransaction.Connection != null)
-                sqlCommand = new SqlCommand("", sqlConnection, sqlTransaction);
+                sqlCommand = new SqlCommand("", SqlConnection, sqlTransaction);
             else
-                sqlCommand = new SqlCommand("", sqlConnection);
+                sqlCommand = new SqlCommand("", SqlConnection);
 
             sqlCommand.CommandTimeout = timeOut;
             TryConnectToDatabase(sqlCommand);
@@ -1222,9 +1222,9 @@ namespace EntityHandler
                     if (string.IsNullOrEmpty(reconnectSqlConnectionString))
                         throw new Exception("Unable to connect to database.");
 
-                    sqlConnection = new SqlConnection(reconnectSqlConnectionString);
-                    sqlConnection.Open();
-                    sqlCommand.Connection = sqlConnection;
+                    SqlConnection = new SqlConnection(reconnectSqlConnectionString);
+                    SqlConnection.Open();
+                    sqlCommand.Connection = SqlConnection;
                     Thread.Sleep(1000);
                 }
             }
@@ -1278,7 +1278,7 @@ namespace EntityHandler
 
         public bool CreateTableClone(string sourceTableName, string newName, Type entityType)
         {
-            SQLTableCreator creator = new SQLTableCreator(sqlConnection, sqlTransaction);
+            SQLTableCreator creator = new SQLTableCreator(SqlConnection, sqlTransaction);
             SqlCommand cmd = GetSqlCommand();
 
             cmd.CommandText = "SELECT TOP 1 * FROM [" + sourceTableName + "]";
