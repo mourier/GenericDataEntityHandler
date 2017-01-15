@@ -8,7 +8,7 @@ using System.Reflection;
 using System.Threading;
 
 
-namespace GenericSQLEntityHandler
+namespace EntityHandler
 {
     public  class GenericSQLEntityHandler
     {
