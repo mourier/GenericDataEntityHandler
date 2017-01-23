@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace EntityHandler
 {
-    public  class GenericSQLEntityHandler
+    public class GenericSQLEntityHandler
     {
         #region Private Members
 
@@ -21,7 +21,7 @@ namespace EntityHandler
         private string reconnectSqlConnectionString = "";
 
         private SqlTransaction sqlTransaction = null;
-        
+
 
         private Dictionary<Type, Dictionary<string, string>> columnInformationList = new Dictionary<Type, Dictionary<string, string>>();
 
@@ -34,8 +34,11 @@ namespace EntityHandler
         #endregion Public Members
 
         #region Events
+
         public event ErrorHandler ErrorOccurred;
+
         public delegate void ErrorHandler(Exception ex);
+
         #endregion Events
 
         public GenericSQLEntityHandler(SqlConnection sqlConnection)
@@ -47,6 +50,7 @@ namespace EntityHandler
         #region Save Methods
 
         #region Bulk Save
+
         public bool BulkInsert<T>(ICollection<T> entityList, string tableName, string[] columnNames) where T : class
         {
             return BulkInsert(entityList, tableName, columnNames, null);
@@ -61,6 +65,7 @@ namespace EntityHandler
         {
             return BulkSave(entityList, tableName, columnNames, identityColumn, true);
         }
+
         public bool BulkSave<T>(ICollection<T> entities, string tableName, string[] columnNames, string identityColumn,
             bool update, int bulkCopyTimeout = 600) where T : class
         {
@@ -77,7 +82,7 @@ namespace EntityHandler
 
                 Type entityType = typeof(T);
                 List<PropertyInfo> propertyInfos = new List<PropertyInfo>();
-                if(columnNames != null && columnNames.Length > 0)
+                if (columnNames != null && columnNames.Length > 0)
                 {
                     foreach (string columnName in columnNames)
                     {
@@ -161,7 +166,7 @@ namespace EntityHandler
                     {
                         //Check if the temp table exists for some reason and then just reuse it if it does otherwise create it
                         cmd.CommandText = "IF OBJECT_ID('tempdb.." + destinationTableName + "') IS NULL BEGIN SELECT 0 END ELSE SELECT 1";
-                        if ((int)cmd.ExecuteScalar() == 0)
+                        if ((int) cmd.ExecuteScalar() == 0)
                             CreateTableClone(tableName, destinationTableName, entityType);
                         else
                             cmd.CommandText = "TRUNCATE TABLE " + destinationTableName;
@@ -221,29 +226,29 @@ namespace EntityHandler
 
         #endregion Bulk Save
 
-            /// <summary>
-            /// Saves a single entity to the database.
-            /// </summary>
-            /// <param name="entity">The entity to save.</param>
-            /// <param name="table">The name of the table to save to.</param>
-            /// <param name="identityColumns">Only used for Update and InsertOrUpdate. Must contain the columns that identify the entity (Case sensitive).</param>
-            /// <param name="saveType">To save to or update the database, InsertOrUpdate handles a mixed list, but has a little overhead. FastInsert will not select the autogen column after an insert.</param>
-            /// <param name="autoGenIdColumn">If an autoincrement column is in the table, on insert it sets the new id to the inserted entitys corresponding property (Case sensitive).</param>
-            /// <returns>Returns true if the entity is saved/updated, else false.</returns>
+        /// <summary>
+        /// Saves a single entity to the database.
+        /// </summary>
+        /// <param name="entity">The entity to save.</param>
+        /// <param name="table">The name of the table to save to.</param>
+        /// <param name="identityColumns">Only used for Update and InsertOrUpdate. Must contain the columns that identify the entity (Case sensitive).</param>
+        /// <param name="saveType">To save to or update the database, InsertOrUpdate handles a mixed list, but has a little overhead. FastInsert will not select the autogen column after an insert.</param>
+        /// <param name="autoGenIdColumn">If an autoincrement column is in the table, on insert it sets the new id to the inserted entitys corresponding property (Case sensitive).</param>
+        /// <returns>Returns true if the entity is saved/updated, else false.</returns>
         public bool SaveEntity<T>(T entity, string tableName, string[] identityColumns, SaveType saveType, string autoGenIdColumn) where T : class
         {
-            return SaveEntityList(new List<T>(new[] { entity }), tableName, identityColumns, saveType, autoGenIdColumn, false, null);
+            return SaveEntityList(new List<T>(new[] {entity}), tableName, identityColumns, saveType, autoGenIdColumn, false, null);
         }
 
         /// <summary>
-		/// Saves a list of entities to the database.
-		/// </summary>
-		/// <param name="entityList">List of entities to save.</param>
-		/// <param name="table">The name of the table to save to.</param>
-		/// <param name="identityColumns">Only used for Update and InsertOrUpdate. Must contain the columns that identify the entity (Case sensitive).</param>
+        /// Saves a list of entities to the database.
+        /// </summary>
+        /// <param name="entityList">List of entities to save.</param>
+        /// <param name="table">The name of the table to save to.</param>
+        /// <param name="identityColumns">Only used for Update and InsertOrUpdate. Must contain the columns that identify the entity (Case sensitive).</param>
         /// <param name="saveType">To save or update the database, InsertOrUpdate handles a mixed list, but has a little overhead. FastInsert will not select the autogen column after an insert.</param>
-		/// <param name="autoGenIdColumn">If an autoincrement column is in the table, on insert it sets the new id to the inserted entitys corresponding property (Case sensitive).</param>
-		/// <returns>Returns true if all entities are saved/updated, else false.</returns>
+        /// <param name="autoGenIdColumn">If an autoincrement column is in the table, on insert it sets the new id to the inserted entitys corresponding property (Case sensitive).</param>
+        /// <returns>Returns true if all entities are saved/updated, else false.</returns>
         public bool SaveEntities<T>(List<T> entityList, string tableName, string[] identityColumns, SaveType saveType, string autoGenIdColumn) where T : class
         {
             return SaveEntityList(entityList, tableName, identityColumns, saveType, autoGenIdColumn, false, null);
@@ -302,7 +307,7 @@ namespace EntityHandler
                     {
                         while (reader.Read())
                         {
-                            idMap[reader[0].ToString()] = (int)reader[1];
+                            idMap[reader[0].ToString()] = (int) reader[1];
                         }
                     }
                     cmd.CommandText = "";
@@ -352,7 +357,7 @@ namespace EntityHandler
                             entitiesToInsert.Add(entity);
                         }
                         else
-                        { 
+                        {
                             // update
                             if (!string.IsNullOrEmpty(autoGenIdColumn))
                             {
@@ -446,12 +451,12 @@ namespace EntityHandler
                         {
                             if (!autoGenIdIsGuid)
                             {
-                                int autoGenId = (int)(decimal)cmd.ExecuteScalar();
+                                int autoGenId = (int) (decimal) cmd.ExecuteScalar();
                                 entityType.GetProperty(autoGenIdColumn).SetValue(entity, autoGenId, null);
                             }
                             else
                             {
-                                Guid autoGenId = (Guid)cmd.ExecuteScalar();
+                                Guid autoGenId = (Guid) cmd.ExecuteScalar();
                                 entityType.GetProperty(autoGenIdColumn).SetValue(entity, autoGenId, null);
                             }
                         }
@@ -486,7 +491,8 @@ namespace EntityHandler
                             continue;
 
                         if (identityColumnsList.IndexOf(propertyInfo.Name.ToLower()) >= 0)
-                        {  // it's an index
+                        {
+                            // it's an index
                             sqlWhere += " " + propertyInfo.Name + " = @" + propertyInfo.Name + " AND ";
                             whereProperties.Add(propertyInfo);
                         }
@@ -500,7 +506,7 @@ namespace EntityHandler
                             }
                         }
                     }
-                    if (!nothingToUpdate)//skip this if not columns are specified in the update. It happens if the table contains only a few columns and they are key columns
+                    if (!nothingToUpdate) //skip this if not columns are specified in the update. It happens if the table contains only a few columns and they are key columns
                     {
                         cmd.CommandText = sqlUpdate.Substring(0, sqlUpdate.Length - 2) + sqlWhere.Substring(0, sqlWhere.Length - 4);
 
@@ -549,6 +555,7 @@ namespace EntityHandler
         #endregion Save Methods
 
         #region Load Methods
+
         /// <summary>
         /// Tries to load a single entity from the database.
         /// </summary>
@@ -575,14 +582,14 @@ namespace EntityHandler
         }
 
         /// <summary>
-		/// Load a single entity from the database.
-		/// </summary>
-		/// <param name="table">The name of the table to load from.</param>
-		/// <param name="filterDictionary">Search filters. Each entry in the Dictionary contains: 
+        /// Load a single entity from the database.
+        /// </summary>
+        /// <param name="table">The name of the table to load from.</param>
+        /// <param name="filterDictionary">Search filters. Each entry in the Dictionary contains: 
         /// Key: SQL string, ie. 'id > @id', 'birth = @birth' or 'name like '%br%' '.
         /// Value: The object to replace @. If it's null, it will not be added to parameters there should not be a @ in the key.
-		/// Filter may be null if no search criteria!</param>
-		/// <returns>Returns the loaded entity if successful, else null.</returns>
+        /// Filter may be null if no search criteria!</param>
+        /// <returns>Returns the loaded entity if successful, else null.</returns>
         public T LoadSingleEntity<T>(string table, Dictionary<string, object> filterDictionary) where T : class
         {
             T entity;
@@ -780,7 +787,6 @@ namespace EntityHandler
             SqlDataReader reader = null;
             SqlCommand cmd = GetSqlCommand();
             Dictionary<string, string> columnsInBoth = new Dictionary<string, string>();
-            entityList = null;
             Type entityType = null;
 
             try
@@ -843,7 +849,7 @@ namespace EntityHandler
                         firstRecord = false;
                     }
 
-                    T entityObj = (T)Activator.CreateInstance(entityType);
+                    T entityObj = (T) Activator.CreateInstance(entityType);
                     foreach (string columnName in columnsInBoth.Values)
                     {
                         object dbObj = reader[columnName];
@@ -976,7 +982,7 @@ namespace EntityHandler
                 entityList = new List<T>();
                 while (reader.Read())
                 {
-                    T entityObj = (T)Activator.CreateInstance(entityType);
+                    T entityObj = (T) Activator.CreateInstance(entityType);
                     foreach (string columnName in columnsInBoth.Values)
                     {
                         object dbObj = reader[columnName];
@@ -1021,6 +1027,7 @@ namespace EntityHandler
             entityList = null;
             return false;
         }
+
         #endregion Load Methods
 
         #region Delete
@@ -1034,7 +1041,7 @@ namespace EntityHandler
         /// <returns>Returns true if successful, else false.</returns>
         public bool DeleteEntity<T>(T entity, string tableName, string[] identityColumns) where T : class
         {
-            return DeleteEntitiesFromList(new List<T> { entity }, tableName, identityColumns);
+            return DeleteEntitiesFromList(new List<T> {entity}, tableName, identityColumns);
         }
 
         /// <summary>
@@ -1147,7 +1154,7 @@ namespace EntityHandler
             catch (Exception exception)
             {
                 string errorMessage = GenerateErrorMessage<T>(entityList.Count > 0 ? entityList[0].GetType() : null, tableName, exception.Message,
-                  exception.StackTrace);
+                    exception.StackTrace);
 
                 Debug.WriteLine(errorMessage);
                 ErrorOccurred?.Invoke(exception);
@@ -1161,10 +1168,10 @@ namespace EntityHandler
 
         #region Helper Methods
 
-        private string GenerateErrorMessage<T>(Type entityType, string table, SaveType saveType, string exceptionMessage, string stacktrace) where T : class 
+        private string GenerateErrorMessage<T>(Type entityType, string table, SaveType saveType, string exceptionMessage, string stacktrace) where T : class
         {
             string message = "";
-            message += "Entity type: " + entityType ??  "NULL" + Environment.NewLine;
+            message += "Entity type: " + entityType ?? "NULL" + Environment.NewLine;
 
             message += "Table name: " + table + Environment.NewLine;
             message += "Save type: " + saveType + Environment.NewLine;
@@ -1216,7 +1223,7 @@ namespace EntityHandler
                     if (sqlTransaction != null && sqlTransaction.Connection != null)
                         throw new Exception("Unable to connect to database.");
 
-                    if (tryCount == (connectionRetries -1))
+                    if (tryCount == (connectionRetries - 1))
                         throw new Exception("Unable to connect to database. Number of retries: " + connectionRetries);
 
                     if (string.IsNullOrEmpty(reconnectSqlConnectionString))
@@ -1289,6 +1296,102 @@ namespace EntityHandler
             creator.Create(dataTable, newName, entityType);
             return true;
         }
+
         #endregion Helper Methods
+
+        #region Stored Procedures
+
+        public List<T> RunStoredProcedure<T>(string storedProcedureName, ICollection<KeyValuePair<string, object>> parameters) where T : class
+        {
+            List<T> entityList;
+            TryRunStoredProcedure(storedProcedureName, parameters, out entityList);
+            return entityList;
+        }
+
+        private bool TryRunStoredProcedure<T>(string storedProcedureName, ICollection<KeyValuePair<string, object>> parameters, out List<T> entityList) where T : class
+        {
+            SqlDataReader reader = null;
+            SqlCommand cmd = GetSqlCommand();
+            Dictionary<string, string> columnsInBoth = new Dictionary<string, string>();
+            
+            Type entityType = null;
+
+            try
+            {
+                entityList = new List<T>();
+                entityType = typeof(T);
+                cmd.Parameters.Clear();
+                cmd.CommandType = CommandType.StoredProcedure;
+                string sqlSelect = "";
+                sqlSelect = $"{storedProcedureName}";
+
+                foreach (KeyValuePair<string, object> parameter in parameters)
+                {
+                    AddParameterToCmd(parameter.Value, cmd, "" + parameter.Key);
+                }
+
+                cmd.CommandText = sqlSelect;
+                reader = cmd.ExecuteReader();
+                bool firstRecord = true;
+                var tableColumns = Enumerable.Range(0, reader.FieldCount).Select(reader.GetName).ToList().ConvertAll(s => s.ToLower());
+
+                PropertyInfo[] propertyInfos = entityType.GetProperties();
+                foreach (PropertyInfo propertyInfo in propertyInfos)
+                {
+                    if (tableColumns.Contains(propertyInfo.Name.ToLower()))
+                    {
+                        columnsInBoth.Add(propertyInfo.Name.ToLower(), propertyInfo.Name);
+                    }
+                }
+                while (reader.Read())
+                {
+                    T entityObj = (T)Activator.CreateInstance(entityType);
+                    foreach (string columnName in columnsInBoth.Values)
+                    {
+                        object dbObj = reader[columnName];
+                        if (dbObj is DBNull)
+                        {
+                            // only handle properties, that can be set to null
+                            entityType.GetProperty(columnName).SetValue(entityObj, null, null);
+                        }
+                        else
+                        {
+                            entityType.GetProperty(columnName).SetValue(entityObj, dbObj, null);
+                        }
+                    }
+                    entityList.Add(entityObj);
+                }
+                reader.Close();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                string message = "";
+                message += "Entity type: " + entityType != null ? entityType.ToString() : "NULL" + Environment.NewLine;
+                if (parameters != null && parameters.Count != 0)
+                {
+                    message += "Parameters: " + Environment.NewLine;
+                    foreach (KeyValuePair<string, object> pair in parameters)
+                    {
+                        message += "\tKey: " + pair.Key + "\tValue: " + pair.Value + Environment.NewLine;
+                    }
+                }
+                message += "Error message: " + ex.Message + Environment.NewLine;
+                message += "Stacktrace: " + ex.StackTrace + Environment.NewLine;
+
+                Debug.WriteLine(message);
+
+                if (reader != null)
+                    reader.Close();
+                if (ErrorOccurred != null)
+                    ErrorOccurred(ex);
+            }
+
+            entityList = null;
+            return false;
+        }
+
+        #endregion Stored Procedures
     }
 }
