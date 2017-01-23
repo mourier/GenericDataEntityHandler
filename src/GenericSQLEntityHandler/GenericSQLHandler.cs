@@ -744,5 +744,33 @@ namespace EntityHandler
         }
 
         #endregion Private methods
+
+        #region Stored Procedure Methods
+        /// <summary>
+        /// Runs stored procedure, and returns list of results of given type
+        /// </summary>
+        /// <typeparam name="T">entity type</typeparam>
+        /// <param name="connection">current active connection</param>
+        /// <param name="storedProcedureName">name of stored procedure to run</param>
+        /// <param name="parameters">parameters for stored procedure in format [key, value]</param>
+        /// <returns>list of type T</returns>
+        public static List<T> RunStoredProcedure<T>(SqlConnection connection, string storedProcedureName, Dictionary<string, object> parameters) where T :  class
+        {
+            try
+            {
+                ValidateConnection(connection);
+                GenericSQLEntityHandler handler = new GenericSQLEntityHandler(connection);
+                var result = handler.RunStoredProcedure<T>(storedProcedureName, parameters);
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.ToString());
+                return null;
+            }
+        }
+
+        #endregion Stored Procedure Methods
     }
 }
