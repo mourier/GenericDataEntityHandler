@@ -1301,6 +1301,18 @@ namespace EntityHandler
 
         #region Stored Procedures
 
+        public T RunStoredProcedureSingle<T>(string storedProcedureName, ICollection<KeyValuePair<string, object>> parameters) where T : class
+        {
+            List<T> entityList;
+            TryRunStoredProcedure(storedProcedureName, parameters, out entityList);
+
+            if (entityList != null && entityList.Any())
+            {
+                return entityList.FirstOrDefault();
+            }
+
+            return null;
+        }
         public List<T> RunStoredProcedure<T>(string storedProcedureName, ICollection<KeyValuePair<string, object>> parameters) where T : class
         {
             List<T> entityList;

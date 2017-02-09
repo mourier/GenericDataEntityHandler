@@ -770,6 +770,30 @@ namespace EntityHandler
                 return null;
             }
         }
+        /// <summary>
+        /// Runs stored procedure, and returns returns first element in resultset
+        /// </summary>
+        /// <typeparam name="T">entity type</typeparam>
+        /// <param name="connection"></param>
+        /// <param name="storedProcedureName">name of stored procedure to run</param>
+        /// <param name="parameters">parameters for stored procedure in format [key, value]</param>
+        /// <returns>entity type of first result</returns>
+        public static T RunStoredProcedureSingle<T>(SqlConnection connection, string storedProcedureName, Dictionary<string, object> parameters) where T : class
+        {
+            try
+            {
+                ValidateConnection(connection);
+                GenericSQLEntityHandler handler = new GenericSQLEntityHandler(connection);
+                T result = handler.RunStoredProcedureSingle<T>(storedProcedureName, parameters);
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.ToString());
+                return null;
+            }
+        }
 
         #endregion Stored Procedure Methods
     }
