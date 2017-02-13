@@ -101,6 +101,30 @@ namespace EntityHandler
             return entityDataHandler.SaveEntity(entity, tableName ?? typeof(T).Name, keys, SaveType.InsertOrUpdate, identity);
         }
 
+        public static bool BulkUpdate<T>(SqlConnection connection, List<T> entities,string identity = "Id", string tableName = null, string[] columnNames = null) where T : class
+        {
+            ValidateConnection(connection);
+
+            GenericSQLEntityHandler entityHandler = new GenericSQLEntityHandler(connection);
+            return entityHandler.BulkUpdate(entities, tableName ?? typeof(T).Name, columnNames, identity);
+        }
+
+        public static bool BulKInsert<T>(SqlConnection connection, List<T> entities, string identity = "Id", string tableName = null, string[] columnNames = null) where T : class
+        {
+            ValidateConnection(connection);
+            GenericSQLEntityHandler entityHandler = new GenericSQLEntityHandler(connection);
+            return entityHandler.BulkInsert(entities, tableName ?? typeof(T).Name, columnNames, identity);
+
+        }
+
+        public static bool BulKInsert<T>(SqlConnection connection, List<T> entities, string tableName = null, string[] columnNames = null) where T : class
+        {
+            ValidateConnection(connection);
+            GenericSQLEntityHandler entityHandler = new GenericSQLEntityHandler(connection);
+            return entityHandler.BulkInsert(entities, tableName ?? typeof(T).Name, columnNames, null);
+
+        }
+
         #endregion Save Methods
 
         #region Load Methods
