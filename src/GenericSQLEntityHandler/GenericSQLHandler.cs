@@ -201,7 +201,6 @@ namespace EntityHandler
             try
             {
                 ValidateConnection(connection);
-                    connection.Open();
 
                 GenericSQLEntityHandler entityHandler = new GenericSQLEntityHandler(connection);
                 return entityHandler.LoadEntities<T>(tableName ?? typeof(T).Name, filter ?? new Dictionary<string, object>());
