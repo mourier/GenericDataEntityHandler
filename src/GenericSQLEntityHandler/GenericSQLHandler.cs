@@ -201,7 +201,6 @@ namespace EntityHandler
             try
             {
                 ValidateConnection(connection);
-                    connection.Open();
 
                 GenericSQLEntityHandler entityHandler = new GenericSQLEntityHandler(connection);
                 return entityHandler.LoadEntities<T>(tableName ?? typeof(T).Name, filter ?? new Dictionary<string, object>());
@@ -737,7 +736,7 @@ namespace EntityHandler
         private static void ValidateConnection(SqlConnection connection)
         {
             if (connection == null)
-                throw new Exception("COnnection cannot be null - please privide valid connection");
+                throw new Exception("Connection cannot be null - please privide valid connection");
 
             if (connection.State == ConnectionState.Closed)
                 connection.Open();
