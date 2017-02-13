@@ -100,7 +100,16 @@ namespace EntityHandler
             GenericSQLEntityHandler entityDataHandler = new GenericSQLEntityHandler(connection);
             return entityDataHandler.SaveEntity(entity, tableName ?? typeof(T).Name, keys, SaveType.InsertOrUpdate, identity);
         }
-
+        /// <summary>
+        /// Fast bulk updates entities.
+        /// </summary>
+        /// <typeparam name="T">Entity type</typeparam>
+        /// <param name="connection">valid connection to database</param>
+        /// <param name="entities">list of entites for updating</param>
+        /// <param name="identity">defines the columnname that holds the identity column, default is Id</param>
+        /// <param name="tableName">Name of table in database. default entitytype name</param>
+        /// <param name="columnNames">list of columnnames that that should be updates. Default all columns</param>
+        /// <returns>true if success</returns>
         public static bool BulkUpdate<T>(SqlConnection connection, List<T> entities,string identity = "Id", string tableName = null, string[] columnNames = null) where T : class
         {
             ValidateConnection(connection);
@@ -108,7 +117,16 @@ namespace EntityHandler
             GenericSQLEntityHandler entityHandler = new GenericSQLEntityHandler(connection);
             return entityHandler.BulkUpdate(entities, tableName ?? typeof(T).Name, columnNames, identity);
         }
-
+        /// <summary>
+        /// Fast bulk insert of entities
+        /// </summary>
+        /// <typeparam name="T">Entity type</typeparam>
+        /// <param name="connection">valid connection to database</param>
+        /// <param name="entities">list of entites for updating</param>
+        /// <param name="identity">defines the columnname that holds the identity column, default is Id</param>
+        /// <param name="tableName">Name of table in database. default entitytype name</param>
+        /// <param name="columnNames">list of columnnames that that should be updates. Default all columns</param>
+        /// <returns>true if success</returns>
         public static bool BulKInsert<T>(SqlConnection connection, List<T> entities, string identity = "Id", string tableName = null, string[] columnNames = null) where T : class
         {
             ValidateConnection(connection);
@@ -116,7 +134,15 @@ namespace EntityHandler
             return entityHandler.BulkInsert(entities, tableName ?? typeof(T).Name, columnNames, identity);
 
         }
-
+        /// <summary>
+        /// Fast bulk insert of entities
+        /// </summary>
+        /// <typeparam name="T">Entity type</typeparam>
+        /// <param name="connection">valid connection to database</param>
+        /// <param name="entities">list of entites for updating</param>
+        /// <param name="tableName">Name of table in database. default entitytype name</param>
+        /// <param name="columnNames">list of columnnames that that should be updates. Default all columns</param>
+        /// <returns>true if success</returns>
         public static bool BulKInsert<T>(SqlConnection connection, List<T> entities, string tableName = null, string[] columnNames = null) where T : class
         {
             ValidateConnection(connection);
