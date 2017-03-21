@@ -1280,7 +1280,10 @@ namespace EntityHandler
 
         private void AddParameterToCmd(object fieldObj, SqlCommand cmd, string idColumn)
         {
-            cmd.Parameters.AddWithValue("@" + idColumn, fieldObj ?? DBNull.Value);
+            if(idColumn.StartsWith("@"))
+                cmd.Parameters.AddWithValue(idColumn, fieldObj ?? DBNull.Value);
+            else
+                cmd.Parameters.AddWithValue("@" + idColumn, fieldObj ?? DBNull.Value);
         }
 
         public bool CreateTableClone(string sourceTableName, string newName, Type entityType)
