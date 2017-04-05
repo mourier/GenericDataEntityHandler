@@ -619,6 +619,9 @@ namespace EntityHandler
         {
             try
             {
+                if (keys == null || !keys.Any())
+                    keys = new[] { identity };
+
                 ValidateConnection(connection);
                 GenericSQLEntityHandler entityHandler = new GenericSQLEntityHandler(connection);
                 return entityHandler.DeleteEntity(entity, tableName ?? typeof(T).Name, keys);
@@ -646,6 +649,9 @@ namespace EntityHandler
         {
             try
             {
+                if (keys == null || !keys.Any())
+                    keys = new[] { identity };
+
                 ValidateConnection(connection);
                 GenericSQLEntityHandler entityHandler = new GenericSQLEntityHandler(connection);
                 return entityHandler.DeleteEntities(entities, tableName ?? typeof(T).Name, keys);

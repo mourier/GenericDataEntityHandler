@@ -871,7 +871,7 @@ namespace EntityHandler
             catch (Exception ex)
             {
                 string message = "";
-                message += "Entity type: " + entityType != null ? entityType.ToString() : "NULL" + Environment.NewLine;
+                message += "Entity type: " + (entityType != null ? entityType.ToString() : "NULL") + Environment.NewLine;
                 message += "Query: " + query + Environment.NewLine;
                 if (filterDictionary != null && filterDictionary.Count != 0)
                 {
@@ -1005,7 +1005,7 @@ namespace EntityHandler
             catch (Exception ex)
             {
                 string message = "";
-                message += "Entity type: " + entityType != null ? entityType.ToString() : "NULL" + Environment.NewLine;
+                message += "Entity type: " + (entityType != null ? entityType.ToString() : "NULL") + Environment.NewLine;
                 if (filterDictionary != null && filterDictionary.Count != 0)
                 {
                     message += "Filter: " + Environment.NewLine;
